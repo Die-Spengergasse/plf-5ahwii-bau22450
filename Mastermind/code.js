@@ -1,94 +1,73 @@
 "use strict";
 class Code {
-    parent = null;
-    domObj = null;
-    colorArray = null;
-    visible = true;
-    isBewerted = false;
-
     constructor(parent) {
-        this.parent = parent; // parent = main
+        this.parent = parent;
         this.domObj = document.createElement("div");
         this.domObj.classList.add("row");
         this.domObj.obj = this;
-
-        let col;
         this.colorArray = [];
+        this.visible = true;
+        this.isBewerted = false;
+
         for (let i = 1; i <= 4; i++) {
-            col = new Color(this, i);
+            const col = new Color(this, i);
             this.domObj.appendChild(col.domObj);
             this.colorArray.push(col);
         }
     }
-
     getPrimitive() {
-        let rw = [];
-        for (let color of this.colorArray) {
-            rw.push(color.currentValue);
-        }
-        return rw;
+        return this.colorArray.map((c) => c.currentValue);
     }
 }
 
 class Master extends Code {
     constructor(parent) {
-        // parent: main!
         super(parent);
-        let button;
-        button = document.createElement("button");
-        button.obj = this;
-        button.classList.add("neuSpiel");
-        button.innerHTML = "Neues\nSpiel";
-        button.addEventListener("click", (e) => {
-            // cl("Neues Spiel // target", e.target)
-            // e.target.parentElement.obj.obj.newGame()
-            e.target.obj.parent.newGame();
-        });
-        this.domObj.appendChild(button);
-        // Versteck Button
-        button = document.createElement("button");
-        button.obj = this;
-        button.classList.add("visible");
-        button.innerText = "Zeig\nher";
-        button.addEventListener("click", (e) => {
-            //cl("zeige // e.target", e.target)
+
+        let btn = document.createElement("button");
+        btn.obj = this;
+        btn.classList.add("neuSpiel");
+        btn.innerHTML = "Neues\nSpiel";
+        btn.addEventListener("click", (e) => e.target.obj.parent.newGame());
+        this.domObj.appendChild(btn);
+
+        btn = document.createElement("button");
+        btn.obj = this;
+        btn.classList.add("visible");
+        btn.innerText = "Zeig\nher";
+        btn.addEventListener("click", (e) => {
             e.target.obj.toggleVisibility();
-            if (e.target.obj.visible) {
-                e.target.innerText = "Ver-\nsteck";
-            } else {
-                e.target.innerText = "Zeig\nher";
-            }
+            e.target.innerText = e.target.obj.visible
+                ? "Ver-\nsteck"
+                : "Zeig\nher";
         });
-        this.domObj.appendChild(button);
+        this.domObj.appendChild(btn);
+
         this.shuffle();
         this.makeVisible(false);
     }
 
     getPossibilities() {
-        let rw = [];
+        const res = [];
         for (let i = 0; i < 6; i++) {
             for (let j = 0; j < 6; j++) {
                 for (let k = 0; k < 6; k++) {
                     for (let l = 0; l < 6; l++) {
-                        rw.push([i, j, k, l]);
+                        res.push([i, j, k, l]);
                     }
                 }
             }
         }
-        return rw;
+        return res;
     }
 
     shuffle() {
-        for (let color of this.colorArray) {
-            color.randomize();
-        }
+        this.colorArray.forEach((c) => c.randomize());
     }
 
     makeVisible(visible) {
         this.visible = visible;
-        for (let color of this.colorArray) {
-            color.updateDisplay(visible);
-        }
+        this.colorArray.forEach((c) => c.updateDisplay(visible));
     }
 
     toggleVisibility() {
@@ -97,100 +76,75 @@ class Master extends Code {
 }
 
 class Guess extends Code {
-    // Whole Row
-    bewertePegs = [];
-    bewertung = null;
-    possibilitiesInherited = null; // array
     constructor(parent, possibilities) {
-        // TODO Master verankern für Bewertung
         super(parent);
-        if (possibilities.length == 1) {
-            parent.notify("Ich kenne die richtige Lösung ;)");
-        } else {
-            parent.notify(
-                `Neuer Versuch, ${possibilities.length} gültige Möglichkeiten`
-            );
-        }
+        this.bewertePegs = [];
+        this.bewertung = null;
         this.possibilitiesInherited = possibilities;
-        // Bewerte - Button
-        let button = document.createElement("button");
-        button.obj = this;
-        button.classList.add("bewerte");
-        button.innerText = "Bewerten";
-        button.addEventListener("click", (e) => {
-            //cl("e.target", e.target)
-            e.target.obj.bewerte();
-        });
-        this.domObj.appendChild(button);
 
-        // auto Rate Button
-        button = document.createElement("button");
-        button.obj = this;
-        button.classList.add("autoGuess");
-        button.innerHTML = "Auto Rate";
-        button.addEventListener("click", (e) => {
-            e.target.obj.autoGuess();
-        });
-        this.domObj.appendChild(button);
+        parent.notify(
+            possibilities.length == 1
+                ? "Ich kenne die richtige Lösung ;)"
+                : `Neuer Versuch, ${possibilities.length} gültige Möglichkeiten`,
+        );
 
-        let peg;
+        let btn = document.createElement("button");
+        btn.obj = this;
+        btn.classList.add("bewerte");
+        btn.innerText = "Bewerten";
+        btn.addEventListener("click", (e) => e.target.obj.bewerte());
+        this.domObj.appendChild(btn);
+
+        btn = document.createElement("button");
+        btn.obj = this;
+        btn.classList.add("autoGuess");
+        btn.innerHTML = "Auto Rate";
+        btn.addEventListener("click", (e) => e.target.obj.autoGuess());
+        this.domObj.appendChild(btn);
+
         for (let i = 1; i <= 4; i++) {
-            peg = new BewertePeg(this, i);
+            const peg = new BewertePeg(this, i);
             this.bewertePegs.push(peg);
             this.domObj.appendChild(peg.domObj);
         }
     }
+
     isComplete() {
-        // TODO rename sinnvoll
-        let rw = true;
-        for (let color of this.colorArray) {
-            if (!color.isUpdated) {
-                rw = false;
-            }
-        }
-        return rw;
+        return this.colorArray.every((c) => c.isUpdated);
     }
 
     bewerte(master = null) {
-        let bewCount;
         if (!this.isComplete()) {
             this.parent.notify("Code ist nicht fertig, kann nicht bewerten");
             return;
         }
-        if (master == null) {
-            master = this.parent.master.getPrimitive();
-        }
-        this.bewertung = this.getPrimitive();
-        // this.parent.notify(`master: ${master}`)
-        // this.parent.notify(`guessA: ${this.bewertung}`)
-        this.bewertung = this.getBewertung(master, this.bewertung);
+
+        master = master || this.parent.master.getPrimitive();
+        this.bewertung = this.getBewertung(master, this.getPrimitive());
         this.parent.notify(
-            `Bewertung: ${this.bewertung[0]} schwarze und ${this.bewertung[1]} weisse`
+            `Bewertung: ${this.bewertung[0]} schwarze und ${
+                this.bewertung[1]
+            } weisse`,
         );
-        bewCount = 1;
+
+        let bewCount = 1;
         for (let i = 0; i < this.bewertung[0]; i++) {
-            this.domObj.getElementsByClassName(
-                `b${bewCount}`
-            )[0].style.backgroundColor = "#000";
-            bewCount++;
+            this.domObj.getElementsByClassName(`b${bewCount++}`)[0].style
+                .backgroundColor = "#000";
         }
         for (let i = 0; i < this.bewertung[1]; i++) {
-            this.domObj.getElementsByClassName(
-                `b${bewCount}`
-            )[0].style.backgroundColor = "#fff";
-            bewCount++;
+            this.domObj.getElementsByClassName(`b${bewCount++}`)[0].style
+                .backgroundColor = "#fff";
         }
         for (; bewCount <= 4; bewCount++) {
-            this.domObj.getElementsByClassName(
-                `b${bewCount}`
-            )[0].style.backgroundColor = "#888";
+            this.domObj.getElementsByClassName(`b${bewCount}`)[0].style
+                .backgroundColor = "#888";
         }
+
         if (!this.isBewerted) {
-            if (this.bewertung[0] < 4) {
-                this.parent.prependGuess();
-            } else {
-                this.parent.prependWin();
-            }
+            (this.bewertung[0] < 4)
+                ? this.parent.prependGuess()
+                : this.parent.prependWin();
         } else {
             this.parent.notify("Ist schon bewertet!");
         }
@@ -198,138 +152,99 @@ class Guess extends Code {
     }
 
     getPossibilities() {
-        let rw = [];
-        let primitivThis = this.getPrimitive();
-        for (let poss of this.possibilitiesInherited) {
-            if (
-                this.arraysEqual(
-                    this.getBewertung(poss, primitivThis),
-                    this.bewertung
-                )
-            ) {
-                rw.push(poss);
-            }
-        }
-        return rw;
+        const guess = this.getPrimitive();
+        return this.possibilitiesInherited.filter((p) =>
+            this.arraysEqual(this.getBewertung(p, guess), this.bewertung)
+        );
     }
 
-    arraysEqual(one, two) {
-        if (one.length != two.length) {
-            return false;
-        }
-        for (let i = 0; i < one.length; i++) {
-            if (one[i] != two[i]) {
-                return false;
-            }
-        }
-        return true;
+    arraysEqual(a, b) {
+        return a.length === b.length && a.every((v, i) => v == b[i]);
     }
 
     getBewertung(parMaster, parGuess) {
-        // master & guess are int[4], return int[2]
-        let master = Array.from(parMaster);
-        let guess = Array.from(parGuess);
-        let schwarze = 0,
-            weisse = 0;
-        // Erst die Anzahl der schwarzen berechnen und sowohl Vorgabe als auch Versuch auf undefined setzen
+        const master = Array.from(parMaster);
+        const guess = Array.from(parGuess);
+        let schwarze = 0, weisse = 0;
+
         for (let i = 0; i < guess.length; i++) {
             if (master[i] == guess[i]) {
                 schwarze++;
-                master[i] = undefined;
-                guess[i] = undefined;
+                master[i] = guess[i] = undefined;
             }
         }
-        // weisse finden
+
         for (let i = 0; i < guess.length; i++) {
-            if (guess[i] == undefined) {
-                // Für den wurde bereits ein schwarzer vergeben
-                continue; // i.e. try next peg of guess
-            }
-            // suche diesen Stecker irgendwo im master
-            for (let j = 0; j < guess.length; j++) {
+            if (guess[i] === undefined) continue;
+
+            for (let j = 0; j < master.length; j++) {
                 if (master[j] == guess[i]) {
                     weisse++;
-                    guess[i] = undefined; // redundant because of the break
-                    master[j] = undefined;
-                    break; // Falls es noch andere der gleichen Farbe in der Vorgabe gibt, werden diese nicht gezählt
+                    master[j] = guess[i] = undefined;
+                    break;
                 }
             }
         }
         return [schwarze, weisse];
     }
+
     autoGuess() {
-        let bestArray = this.getBestArray(this.possibilitiesInherited);
-        let autoGuess = bestArray[Math.floor(Math.random() * bestArray.length)];
-        this.updateSelf(autoGuess);
+        const bestArray = this.getBestArray(this.possibilitiesInherited);
+        this.updateSelf(
+            bestArray[Math.floor(Math.random() * bestArray.length)],
+        );
     }
 
     updateSelf(guess) {
-        for (let i = 0; i < 4; i++) {
-            this.colorArray[i].setInt(guess[i]);
-        }
+        for (let i = 0; i < 4; i++) this.colorArray[i].setInt(guess[i]);
     }
+
     getBestArray(arr) {
-        // array of guess-arrays
-        let dict = new DiversityMap();
-        for (let i = 0; i < arr.length; i++) {
-            let div = this.getDiversity(arr[i]);
-            if (!dict.has(div)) {
-                dict.set(div, []);
-            }
-            dict.get(div).push(arr[i]);
+        const dict = new DiversityMap();
+        for (const g of arr) {
+            const div = this.getDiversity(g);
+            if (!dict.has(div)) dict.set(div, []);
+            dict.get(div).push(g);
         }
         return dict.getMostDiverseArray();
-        // return dict.getFullestArray()
     }
 
     getDiversity(arr) {
-        let symbols = [];
-        for (let i = 0; i < arr.length; i++) {
-            if (!symbols.includes(arr[i])) {
-                symbols.push(arr[i]);
-            }
-        }
-        return symbols.length;
+        return [...new Set(arr)].length;
     }
 }
 
 class DiversityMap extends Map {
     getFullestArray() {
-        let max = 0;
-        let rw;
-        for (let i of this.keys())
-            if (this.get(i).length > max) {
-                max = this.get(i).length;
-                rw = this.get(i);
+        let max = 0, res;
+        for (const k of this.keys()) {
+            if (this.get(k).length > max) {
+                max = this.get(k).length;
+                res = this.get(k);
             }
-        return rw;
+        }
+        return res;
     }
+
     getMostDiverseArray() {
-        let keys = Array.from(this.keys()).sort();
-        return this.get(keys.pop());
+        return this.get(Math.max(...this.keys()));
     }
 }
 
 class BewertePeg {
-    parent = null;
-    domObj = null;
     constructor(parent, i) {
         this.parent = parent;
-        let circ = document.createElement("div");
-        circ.classList.add("circle");
-        circ.classList.add("bew");
-        circ.classList.add(`b${i}`);
-        this.domObj = circ;
+        this.domObj = document.createElement("div");
+        this.domObj.classList.add("circle", "bew", `b${i}`);
     }
 }
 
 class RowWin {
-    domObj = null;
     constructor(parent) {
         this.parent = parent;
         this.domObj = document.createElement("div");
         this.domObj.classList.add("row");
-        let win = document.createElement("div");
+        const win = document.createElement("div");
         win.classList.add("win");
         win.innerHTML = "Gewonnen!";
         this.domObj.appendChild(win);
